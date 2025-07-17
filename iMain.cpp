@@ -562,7 +562,7 @@ void start_level(int l)
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
             if (levels[level][i][j] == 2 || levels[level][i][j] == 3)
-                remaining_pellets=10;
+                remaining_pellets++;
     printf("Remaining pellets: %d\n", remaining_pellets);
 
 }
