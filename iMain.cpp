@@ -38,7 +38,7 @@ int pac_spawnX, pac_spawnY;
 int ghost_spawnX;
 int ghost_spawnY;
 int win_music_played = 0;
-int activate_freeze=0;
+int activate_freeze = 0;
 //---------------------------------------------------------------------------------------------------
 // TO DO:
 //  Sound and music
@@ -57,6 +57,8 @@ int activate_freeze=0;
 // 4 -> ghost doorway
 // 5 -> pacman spawnpoint
 // 6 -> ghost spawnpoint
+// 7 -> freeze powerups
+// 8 -> speedboost
 int moving_flag;
 int levels[MAX_LEVEL][N][M];
 int level = 0;
@@ -118,6 +120,8 @@ typedef struct
     int death_ticks = 4 * 11;
     int freeze = 0;
     int freeze_duration = 0;
+    int activate_speedboost = 0;
+    int speed_duration = 0;
 } Pacman;
 
 typedef struct
@@ -276,44 +280,43 @@ void load_scores()
     }
     printf("\n");
 }
-int game_music_played = 0,menu_music_played=0, moving_music_played = 0,move_sound;
+int game_music_played = 0, menu_music_played = 0, moving_music_played = 0, move_sound;
 void play_music()
-{   
-    if(game_state == WIN && win_music_played==0)
-    {   
+{
+    if (game_state == WIN && win_music_played == 0)
+    {
         iStopAllSounds();
-        iPlaySound("assets/sounds/WIN.wav",false,50);
+        iPlaySound("assets/sounds/WIN.wav", false, 50);
         win_music_played = 1;
         menu_music_played = 0;
     }
-    if(game_state == GAME && game_music_played ==0 )
+    if (game_state == GAME && game_music_played == 0)
     {
         iStopAllSounds();
-        //iPlaySound("assets/sounds/GAME.wav",true,50);
+        // iPlaySound("assets/sounds/GAME.wav",true,50);
         game_music_played = 1;
         menu_music_played = 0;
-        iPlaySound("assets/sounds/GAME.wav",true,40);
+        iPlaySound("assets/sounds/GAME.wav", true, 40);
     }
-    if(game_state == MENU && menu_music_played == 0)
-    {   
+    if (game_state == MENU && menu_music_played == 0)
+    {
         iStopAllSounds();
         game_music_played = 0;
         menu_music_played = 1;
         win_music_played = 0;
-        iPlaySound("assets/sounds/MENU.wav", true,50);
+        iPlaySound("assets/sounds/MENU.wav", true, 50);
     }
-    
-   /* moving_flag = can_move(levels[level], pacman.dir);
-    if(moving_flag && moving_music_played == 0)
-    {
-        move_sound = iPlaySound("assets/sounds/MOVE.wav",true,30);
-        moving_music_played = 1;
-    }
-    else
-    {
-        iStopSound(move_sound);
-    }*/
-    
+
+    /* moving_flag = can_move(levels[level], pacman.dir);
+     if(moving_flag && moving_music_played == 0)
+     {
+         move_sound = iPlaySound("assets/sounds/MOVE.wav",true,30);
+         moving_music_played = 1;
+     }
+     else
+     {
+         iStopSound(move_sound);
+     }*/
 }
 // saves highscore array into a highscores.txt file
 void save_scores(int num)
@@ -402,6 +405,15 @@ void draw_maze(int level[N][M])
             case 7:
                 iSetTransparentColor(3, 255, 247, .4);
                 iFilledCircle(LEFT_BUFFER + j * A + A / 2, BOTTOM_BUFFER + (N - 1 - i) * A + A / 2, pellet_radius * 2);
+                break;
+            case 8:
+                if (tick < 10)
+                    iSetColor(255, 0, 0);
+                else
+                    iSetColor(209, 0, 0);
+
+                iFilledCircle(LEFT_BUFFER + j * A + A / 2, BOTTOM_BUFFER + (N - 1 - i) * A + A / 2, pellet_radius * 2);
+                break;
             default:
                 break;
             }
@@ -579,11 +591,13 @@ void get_pellet(int level_[N][M])
         pacman.score += pellet_value;
         remaining_pellets--;
         level_[row][col] = 0;
-        if (remaining_pellets <= 0 && level==MAX_LEVEL)
+        if (remaining_pellets <= 0 && level == MAX_LEVEL)
         {
-            game_state=WIN;
-        }else if(remaining_pellets <= 0){
-            start_level(level+1);
+            game_state = WIN;
+        }
+        else if (remaining_pellets <= 0)
+        {
+            start_level(level + 1);
         }
     }
 }
@@ -608,11 +622,13 @@ void get_power_up(int level_[N][M])
         }
         level_[row][col] = 0;
         remaining_pellets--;
-        if (remaining_pellets <= 0 && level==MAX_LEVEL)
+        if (remaining_pellets <= 0 && level == MAX_LEVEL)
         {
             game_state = WIN;
-        }else if(remaining_pellets <= 0){
-            start_level(level+1);
+        }
+        else if (remaining_pellets <= 0)
+        {
+            start_level(level + 1);
         }
     }
 }
@@ -623,20 +639,47 @@ void get_power_up_freeze(int level_[N][M])
     int row = N - 1 - (centeredY - BOTTOM_BUFFER) / A;
     int col = (centeredX - LEFT_BUFFER) / A;
     if (level_[row][col] == 7)
-    {   
-        pacman.freeze=1;
+    {
+        pacman.freeze = 1;
         pacman.freeze_duration = 100;
+        pacman.score+=180;
+        activate_freeze = 1;
         /* for (int i = 0; i < 4; i++)
         {
             ghost[i].v = 0;
         } */
         level_[row][col] = 0;
         remaining_pellets--;
-        if (remaining_pellets <= 0 && level==MAX_LEVEL)
+        if (remaining_pellets <= 0 && level == MAX_LEVEL)
         {
             game_state = WIN;
-        }else if(remaining_pellets <= 0){
-            start_level(level+1);
+        }
+        else if (remaining_pellets <= 0)
+        {
+            start_level(level + 1);
+        }
+    }
+}
+void get_speedboost(int level_[N][M])
+{
+    int centeredX = pacman.x + SPRITE_SIZE / 2;
+    int centeredY = pacman.y + SPRITE_SIZE / 2;
+    int row = N - 1 - (centeredY - BOTTOM_BUFFER) / A;
+    int col = (centeredX - LEFT_BUFFER) / A;
+    if (level_[row][col] == 8)
+    {
+        pacman.activate_speedboost = 1;
+        pacman.score += 75;
+        pacman.speed_duration = 75;
+        remaining_pellets--;
+        level_[row][col] = 0;
+        if (remaining_pellets <= 0 && level == MAX_LEVEL)
+        {
+            game_state = WIN;
+        }
+        else if (remaining_pellets <= 0)
+        {
+            start_level(level + 1);
         }
     }
 }
@@ -821,7 +864,7 @@ void iDraw()
         iText(50, 50, msg, GLUT_BITMAP_8_BY_13);
         break;
     case WIN:
-        iShowLoadedImage(0,0, &win);
+        iShowLoadedImage(0, 0, &win);
     default:
         break;
     }
@@ -914,22 +957,33 @@ void update_pacman()
     if (activate_freeze)
     {
         pacman.freeze_duration--;
-        for(int i = 0 ; i<4 ; i++)
+        for (int i = 0; i < 4; i++)
         {
             ghost[i].v = 0;
         }
     }
-    if (pacman.freeze_duration == 0)
+    if (pacman.freeze_duration == 0 && activate_freeze)
     {
-        for(int i = 0 ; i<4; i++)
+        for (int i = 0; i < 4; i++)
         {
             ghost[i].v = 3;
         }
         activate_freeze = 0;
     }
+    if(pacman.activate_speedboost)
+    {
+        pacman.speed_duration--;
+        pacman.v = 7;
+    }
+    if(pacman.speed_duration ==0 && pacman.activate_speedboost)
+    {
+        pacman.v = 4;
+        pacman.activate_speedboost = 0;
+    }
     get_pellet(levels[level]);
     get_power_up(levels[level]);
     get_power_up_freeze(levels[level]);
+    get_speedboost(levels[level]);
     if (tick % 4 == 0)
         iAnimateSprite(&pacman_sprite);
 }
@@ -1041,7 +1095,7 @@ void handle_collision()
 
 // the main function managing everything
 void update_game()
-{   
+{
     switch (game_state)
     {
     case MENU:
@@ -1143,17 +1197,11 @@ void iKeyboard(unsigned char key)
         }
         break;
     case 'b':
-        if(game_state != MENU)
+        if (game_state != MENU)
         {
             game_state = MENU;
         }
         break;
-    case 'f':
-        if(pacman.freeze >0)
-        {
-            activate_freeze =1;
-            pacman.freeze--;
-        }
     default:
         break;
     }
@@ -1253,7 +1301,8 @@ void iMouse(int button, int state, int mx, int my)
     case HIGHSCORE:
     case SETTINGS:
     case HELP:
-        if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
+        if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+        {
             game_state = MENU;
         }
         break;
@@ -1291,7 +1340,7 @@ int main(int argc, char *argv[])
     }
     load_recources();
     int t = iSetTimer(50, update_game);
-    int w = iSetTimer(50,play_music);
+    int w = iSetTimer(50, play_music);
     iInitializeSound();
     iInitialize(MAX_WIDTH, MAX_HEIGHT, "Pacman");
     return 0;
