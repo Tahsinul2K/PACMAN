@@ -59,7 +59,7 @@ int activate_freeze = 0;
 // 6 -> ghost spawnpoint
 // 7 -> freeze powerups
 // 8 -> speedboost
-// 9 -> Health
+// 9 -> Teleport
 int moving_flag;
 int levels[MAX_LEVEL][N][M];
 int level = 0;
@@ -591,7 +591,7 @@ void start_level(int l)
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
             if (levels[level][i][j] == 2  || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8)
-                remaining_pellets=15;
+                remaining_pellets++;
     printf("Remaining pellets: %d\n", remaining_pellets);
 
 }
