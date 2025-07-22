@@ -133,10 +133,17 @@ typedef struct
     int value = 400;
     int is_scared = 0;
     int respawn_ticks = 30;
+
     int score_timer;
+
     int dead = 0;
     int deathX, deathY;
     int time_of_death;
+
+    int can_shoot_laser=1;
+    int laser_duratiton=20;
+    int laser_start_time=0;
+    int is_shooting_laser=0;
 
 } Ghost;
 
@@ -509,6 +516,8 @@ Direction opposite_direction(Direction d)
 // helper function for ghost pathfinding
 int ghost_can_move(int level[N][M], Ghost *g, Direction dir)
 {
+    if(g->is_shooting_laser) return 0;
+
     int nextX = g->x, nextY = g->y;
     switch (dir)
     {
@@ -683,6 +692,32 @@ void get_speedboost(int level_[N][M])
         }
     }
 }
+
+void kill_pacman(){
+    pacman.lives--;
+    game_state = DYING;
+    pacman.death_ticks = 4 * 11;
+    iChangeSpriteFrames(&pacman_sprite, pacman_death, 12);
+}
+
+int in_range(Pacman *p, Ghost *g, int r){
+    int dx=abs(p->x - g->x);
+    int dy=abs(p->y - g->y);
+
+    if(dx*dx + dy*dy <= r*r){
+        printf("in range\n");
+        return 1;
+    }
+    return 0;
+}
+
+void draw_laser(Pacman *p, Ghost *g){
+    if(g->is_shooting_laser && tick<g->laser_start_time+g->laser_duratiton){
+        iSetColor(250,250,250);
+        iLine(p->x + A/2,p->y + A/2,g->x + A/2,g->y + A/2);
+    }
+}
+
 // draw score obtained from killing ghost; the score will slowly move up
 void ghost_score_animation()
 {
@@ -853,6 +888,7 @@ void iDraw()
         for (int i = 0; i < 4; i++)
         {
             iShowSprite(&ghost_sprite[i]);
+            draw_laser(&pacman,&ghost[i]);
         }
         iShowSprite(&pacman_sprite);
         ghost_score_animation();
@@ -1041,6 +1077,15 @@ void update_ghost(Ghost *g, int pacX, int paxY, Direction pac_dir)
     if (tick % 4 == 0)
         iAnimateSprite(&ghost_sprite[g->name]);
 
+    // trigger ghost shooting laser
+    if(g->can_shoot_laser && in_range(&pacman,g,100) && game_state!=DYING){
+        g->is_shooting_laser = 1;
+        g->laser_start_time=tick;
+        kill_pacman();
+    }else{
+        g->is_shooting_laser=0;
+    }
+
     if (ghost_can_move(levels[level], g, g->dir))
     {
         switch (g->dir)
@@ -1085,10 +1130,7 @@ void handle_collision()
         }
         else
         {
-            pacman.lives--;
-            game_state = DYING;
-            pacman.death_ticks = 4 * 11;
-            iChangeSpriteFrames(&pacman_sprite, pacman_death, 12);
+            kill_pacman();
         }
     }
 }
