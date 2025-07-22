@@ -39,6 +39,7 @@ int ghost_spawnX;
 int ghost_spawnY;
 int win_music_played = 0;
 int activate_freeze = 0;
+int teleport = 0;
 //---------------------------------------------------------------------------------------------------
 // TO DO:
 //  Sound and music
@@ -59,6 +60,7 @@ int activate_freeze = 0;
 // 6 -> ghost spawnpoint
 // 7 -> freeze powerups
 // 8 -> speedboost
+// 9 -> Teleport
 // 9 -> Teleport
 int moving_flag;
 int levels[MAX_LEVEL][N][M];
@@ -141,10 +143,10 @@ typedef struct
     int deathX, deathY;
     int time_of_death;
 
-    int can_shoot_laser=0;
-    int laser_duratiton=20;
-    int laser_start_time=0;
-    int is_shooting_laser=0;
+    int can_shoot_laser = 0;
+    int laser_duratiton = 20;
+    int laser_start_time = 0;
+    int is_shooting_laser = 0;
 
 } Ghost;
 
@@ -422,6 +424,14 @@ void draw_maze(int level[N][M])
 
                 iFilledCircle(LEFT_BUFFER + j * A + A / 2, BOTTOM_BUFFER + (N - 1 - i) * A + A / 2, pellet_radius * 2);
                 break;
+            case 9:
+                if (tick < 10)
+                    iSetColor(255, 215, 0);
+                else
+                    iSetColor(218, 165, 32);
+
+                iFilledCircle(LEFT_BUFFER + j * A + A / 2, BOTTOM_BUFFER + (N - 1 - i) * A + A / 2, pellet_radius * 2);
+                break;
             default:
                 break;
             }
@@ -517,7 +527,8 @@ Direction opposite_direction(Direction d)
 // helper function for ghost pathfinding
 int ghost_can_move(int level[N][M], Ghost *g, Direction dir)
 {
-    if(g->is_shooting_laser) return 0;
+    if (g->is_shooting_laser)
+        return 0;
 
     int nextX = g->x, nextY = g->y;
     switch (dir)
@@ -580,20 +591,20 @@ void start_level(int l)
     game_state = GAME;
     pacman.powered_up = 0;
     reset_positions();
-
-    if(l==0){
-        ghost[0].can_shoot_laser=1;
-    }else if(l==1){
-        ghost[0].can_shoot_laser=1;
-        ghost[1].can_shoot_laser=1;
+    if (l == 0)
+    {
+        ghost[0].can_shoot_laser = 1;
     }
-
+    else if (l == 1)
+    {
+        ghost[0].can_shoot_laser = 1;
+        ghost[1].can_shoot_laser = 1;
+    }
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
-            if (levels[level][i][j] == 2  || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8)
+            if (levels[level][i][j] == 2 || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8 || levels[level][i][j] == 9)
                 remaining_pellets++;
     printf("Remaining pellets: %d\n", remaining_pellets);
-
 }
 
 // repeatedly called inside update_pacman() to check if he is on a pellet
@@ -659,7 +670,7 @@ void get_power_up_freeze(int level_[N][M])
     {
         pacman.freeze = 1;
         pacman.freeze_duration = 100;
-        pacman.score+=180;
+        pacman.score += 180;
         activate_freeze = 1;
         /* for (int i = 0; i < 4; i++)
         {
@@ -700,29 +711,55 @@ void get_speedboost(int level_[N][M])
         }
     }
 }
+void get_Teleport(int level_[N][M])
+{
+    int centeredX = pacman.x + SPRITE_SIZE / 2;
+    int centeredY = pacman.y + SPRITE_SIZE / 2;
+    int row = N - 1 - (centeredY - BOTTOM_BUFFER) / A;
+    int col = (centeredX - LEFT_BUFFER) / A;
+    if (level_[row][col] == 9)
+    {
+        teleport = 1;
+        remaining_pellets--;
+        level_[row][col] = 0;
+        if (remaining_pellets <= 0 && level == MAX_LEVEL)
+        {
+            game_state = WIN;
+        }
+        else if (remaining_pellets <= 0)
+        {
+            start_level(level + 1);
+        }
+    }
+}
 
-void kill_pacman(){
+void kill_pacman()
+{
     pacman.lives--;
     game_state = DYING;
     pacman.death_ticks = 4 * 11;
     iChangeSpriteFrames(&pacman_sprite, pacman_death, 12);
 }
 
-int in_range(Pacman *p, Ghost *g, int r){
-    int dx=abs(p->x - g->x);
-    int dy=abs(p->y - g->y);
+int in_range(Pacman *p, Ghost *g, int r)
+{
+    int dx = abs(p->x - g->x);
+    int dy = abs(p->y - g->y);
 
-    if(dx*dx + dy*dy <= r*r){
+    if (dx * dx + dy * dy <= r * r)
+    {
         printf("in range\n");
         return 1;
     }
     return 0;
 }
 
-void draw_laser(Pacman *p, Ghost *g){
-    if(g->is_shooting_laser && tick<g->laser_start_time+g->laser_duratiton){
-        iSetColor(250,250,250);
-        iLine(p->x + A/2,p->y + A/2,g->x + A/2,g->y + A/2);
+void draw_laser(Pacman *p, Ghost *g)
+{
+    if (g->is_shooting_laser && tick < g->laser_start_time + g->laser_duratiton)
+    {
+        iSetColor(250, 250, 250);
+        iLine(p->x + A / 2, p->y + A / 2, g->x + A / 2, g->y + A / 2);
     }
 }
 
@@ -896,7 +933,7 @@ void iDraw()
         for (int i = 0; i < 4; i++)
         {
             iShowSprite(&ghost_sprite[i]);
-            draw_laser(&pacman,&ghost[i]);
+            draw_laser(&pacman, &ghost[i]);
         }
         iShowSprite(&pacman_sprite);
         ghost_score_animation();
@@ -1014,12 +1051,12 @@ void update_pacman()
         }
         activate_freeze = 0;
     }
-    if(pacman.activate_speedboost)
+    if (pacman.activate_speedboost)
     {
         pacman.speed_duration--;
         pacman.v = 7;
     }
-    if(pacman.speed_duration ==0 && pacman.activate_speedboost)
+    if (pacman.speed_duration == 0 && pacman.activate_speedboost)
     {
         pacman.v = 4;
         pacman.activate_speedboost = 0;
@@ -1028,6 +1065,7 @@ void update_pacman()
     get_power_up(levels[level]);
     get_power_up_freeze(levels[level]);
     get_speedboost(levels[level]);
+    get_Teleport(levels[level]);
     if (tick % 4 == 0)
         iAnimateSprite(&pacman_sprite);
 }
@@ -1086,12 +1124,15 @@ void update_ghost(Ghost *g, int pacX, int paxY, Direction pac_dir)
         iAnimateSprite(&ghost_sprite[g->name]);
 
     // trigger ghost shooting laser
-    if(g->can_shoot_laser && in_range(&pacman,g,100) && game_state!=DYING && g->is_scared==0){
+    if (g->can_shoot_laser && in_range(&pacman, g, 100) && game_state != DYING && g->is_scared == 0)
+    {
         g->is_shooting_laser = 1;
-        g->laser_start_time=tick;
+        g->laser_start_time = tick;
         kill_pacman();
-    }else{
-        g->is_shooting_laser=0;
+    }
+    else
+    {
+        g->is_shooting_laser = 0;
     }
 
     if (ghost_can_move(levels[level], g, g->dir))
@@ -1252,6 +1293,13 @@ void iKeyboard(unsigned char key)
             game_state = MENU;
         }
         break;
+    case 't':
+        if (game_state == GAME && teleport == 1)
+        {
+            pacman.x = pac_spawnX;
+            pacman.y = pac_spawnY;
+            teleport = 0;
+        }
     default:
         break;
     }
