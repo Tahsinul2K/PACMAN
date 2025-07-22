@@ -590,11 +590,11 @@ void start_level(int l)
     game_state = GAME;
     pacman.powered_up = 0;
     reset_positions();
-    if (l == 2)
+    if (l == 0)
     {
         ghost[0].can_shoot_laser = 1;
     }
-    else if (l == 3)
+    else if (l == 1)
     {
         ghost[0].can_shoot_laser = 1;
         ghost[1].can_shoot_laser = 1;
