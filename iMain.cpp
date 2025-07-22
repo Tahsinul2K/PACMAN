@@ -140,7 +140,7 @@ typedef struct
     int deathX, deathY;
     int time_of_death;
 
-    int can_shoot_laser=1;
+    int can_shoot_laser=0;
     int laser_duratiton=20;
     int laser_start_time=0;
     int is_shooting_laser=0;
@@ -579,6 +579,13 @@ void start_level(int l)
     game_state = GAME;
     pacman.powered_up = 0;
     reset_positions();
+
+    if(l==2){
+        ghost[0].can_shoot_laser=1;
+    }else if(l==3){
+        ghost[0].can_shoot_laser=1;
+        ghost[1].can_shoot_laser=1;
+    }
 
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
