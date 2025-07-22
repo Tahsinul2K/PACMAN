@@ -39,6 +39,7 @@ int ghost_spawnX;
 int ghost_spawnY;
 int win_music_played = 0;
 int activate_freeze = 0;
+int teleport = 0;
 //---------------------------------------------------------------------------------------------------
 // TO DO:
 //  Sound and music
@@ -59,6 +60,7 @@ int activate_freeze = 0;
 // 6 -> ghost spawnpoint
 // 7 -> freeze powerups
 // 8 -> speedboost
+// 9 -> Teleport
 int moving_flag;
 int levels[MAX_LEVEL][N][M];
 int level = 0;
@@ -421,6 +423,14 @@ void draw_maze(int level[N][M])
 
                 iFilledCircle(LEFT_BUFFER + j * A + A / 2, BOTTOM_BUFFER + (N - 1 - i) * A + A / 2, pellet_radius * 2);
                 break;
+            case 9:
+                if (tick < 10)
+                    iSetColor(255, 215, 0);
+                else
+                    iSetColor(218, 165, 32);
+
+                iFilledCircle(LEFT_BUFFER + j * A + A / 2, BOTTOM_BUFFER + (N - 1 - i) * A + A / 2, pellet_radius * 2);
+                break;
             default:
                 break;
             }
@@ -582,7 +592,7 @@ void start_level(int l)
 
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
-            if (levels[level][i][j] == 2 || levels[level][i][j] == 3)
+            if (levels[level][i][j] == 2 || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8 || levels[level][i][j] == 9)
                 remaining_pellets++;
     printf("Remaining pellets: %d\n", remaining_pellets);
 
@@ -680,6 +690,27 @@ void get_speedboost(int level_[N][M])
         pacman.activate_speedboost = 1;
         pacman.score += 75;
         pacman.speed_duration = 75;
+        remaining_pellets--;
+        level_[row][col] = 0;
+        if (remaining_pellets <= 0 && level == MAX_LEVEL)
+        {
+            game_state = WIN;
+        }
+        else if (remaining_pellets <= 0)
+        {
+            start_level(level + 1);
+        }
+    }
+}
+void get_Teleport(int level_[N][M])
+{
+    int centeredX = pacman.x + SPRITE_SIZE / 2;
+    int centeredY = pacman.y + SPRITE_SIZE / 2;
+    int row = N - 1 - (centeredY - BOTTOM_BUFFER) / A;
+    int col = (centeredX - LEFT_BUFFER) / A;
+    if (level_[row][col] == 9)
+    {
+        teleport = 1;
         remaining_pellets--;
         level_[row][col] = 0;
         if (remaining_pellets <= 0 && level == MAX_LEVEL)
@@ -1020,6 +1051,7 @@ void update_pacman()
     get_power_up(levels[level]);
     get_power_up_freeze(levels[level]);
     get_speedboost(levels[level]);
+    get_Teleport(levels[level]);
     if (tick % 4 == 0)
         iAnimateSprite(&pacman_sprite);
 }
@@ -1244,6 +1276,13 @@ void iKeyboard(unsigned char key)
             game_state = MENU;
         }
         break;
+    case 't':
+        if(game_state == GAME && teleport == 1)
+        {
+            pacman.x = pac_spawnX;
+            pacman.y = pac_spawnY;
+            teleport = 0;
+        }
     default:
         break;
     }
