@@ -631,11 +631,6 @@ void win_game(){
     update_score();
 }
 
-void win_game(){
-    game_state=WIN;
-    update_score();
-}
-
 // repeatedly called inside update_pacman() to check if he is on a pellet
 void get_pellet(int level_[N][M])
 {
