@@ -1110,7 +1110,7 @@ void update_ghost(Ghost *g, int pacX, int paxY, Direction pac_dir)
         iAnimateSprite(&ghost_sprite[g->name]);
 
     // trigger ghost shooting laser
-    if(g->can_shoot_laser && in_range(&pacman,g,100) && game_state!=DYING){
+    if(g->can_shoot_laser && in_range(&pacman,g,100) && game_state!=DYING && g->is_scared == 0){
         g->is_shooting_laser = 1;
         g->laser_start_time=tick;
         kill_pacman();
