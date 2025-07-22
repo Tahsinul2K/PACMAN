@@ -140,7 +140,7 @@ typedef struct
     int deathX, deathY;
     int time_of_death;
 
-    int can_shoot_laser=1;
+    int can_shoot_laser=0;
     int laser_duratiton=20;
     int laser_start_time=0;
     int is_shooting_laser=0;
@@ -580,9 +580,16 @@ void start_level(int l)
     pacman.powered_up = 0;
     reset_positions();
 
+    if(l==0){
+        ghost[0].can_shoot_laser=1;
+    }else if(l==1){
+        ghost[0].can_shoot_laser=1;
+        ghost[1].can_shoot_laser=1;
+    }
+
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
-            if (levels[level][i][j] == 2 || levels[level][i][j] == 3)
+            if (levels[level][i][j] == 2  || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8)
                 remaining_pellets++;
     printf("Remaining pellets: %d\n", remaining_pellets);
 
@@ -1078,7 +1085,7 @@ void update_ghost(Ghost *g, int pacX, int paxY, Direction pac_dir)
         iAnimateSprite(&ghost_sprite[g->name]);
 
     // trigger ghost shooting laser
-    if(g->can_shoot_laser && in_range(&pacman,g,100) && game_state!=DYING){
+    if(g->can_shoot_laser && in_range(&pacman,g,100) && game_state!=DYING && g->is_scared==0){
         g->is_shooting_laser = 1;
         g->laser_start_time=tick;
         kill_pacman();
