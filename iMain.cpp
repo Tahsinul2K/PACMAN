@@ -59,6 +59,7 @@ int activate_freeze = 0;
 // 6 -> ghost spawnpoint
 // 7 -> freeze powerups
 // 8 -> speedboost
+// 9 -> Health
 int moving_flag;
 int levels[MAX_LEVEL][N][M];
 int level = 0;
@@ -158,7 +159,7 @@ Pacman pacman;
 Ghost ghost[4];
 Score highscores[1000];
 
-Image menubg, gameover, highscorebg, splash, win;
+Image menubg, gameover, highscorebg, splash, win, help_screen;
 
 // arrays for the various pacman and ghost sprites
 Image pacman_up[2], pacman_down[2], pacman_left[2], pacman_right[2], pacman_death[12];
@@ -177,7 +178,7 @@ int comp(const void *a, const void *b)
 // loads all the sprites and stuff. Called once at the very start
 void load_recources()
 {
-    // iLoadImage(&help_screen,"assets/images/help_screen.png");
+    iLoadImage(&help_screen,"assets/images/help_screen.png");
     iLoadImage(&splash, "assets/images/splash.jpg");
     iResizeImage(&splash, MAX_WIDTH - 2, MAX_HEIGHT - 2);
     iLoadImage(&menubg, "assets/images/bg1.jpg");
@@ -590,7 +591,7 @@ void start_level(int l)
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
             if (levels[level][i][j] == 2  || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8)
-                remaining_pellets++;
+                remaining_pellets=15;
     printf("Remaining pellets: %d\n", remaining_pellets);
 
 }
