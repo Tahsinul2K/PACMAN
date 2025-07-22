@@ -142,10 +142,10 @@ typedef struct
     int deathX, deathY;
     int time_of_death;
 
-    int can_shoot_laser=1;
-    int laser_duratiton=20;
-    int laser_start_time=0;
-    int is_shooting_laser=0;
+    int can_shoot_laser = 0;
+    int laser_duratiton = 20;
+    int laser_start_time = 0;
+    int is_shooting_laser = 0;
 
 } Ghost;
 
@@ -526,7 +526,8 @@ Direction opposite_direction(Direction d)
 // helper function for ghost pathfinding
 int ghost_can_move(int level[N][M], Ghost *g, Direction dir)
 {
-    if(g->is_shooting_laser) return 0;
+    if (g->is_shooting_laser)
+        return 0;
 
     int nextX = g->x, nextY = g->y;
     switch (dir)
@@ -589,13 +590,20 @@ void start_level(int l)
     game_state = GAME;
     pacman.powered_up = 0;
     reset_positions();
-
+    if (l == 2)
+    {
+        ghost[0].can_shoot_laser = 1;
+    }
+    else if (l == 3)
+    {
+        ghost[0].can_shoot_laser = 1;
+        ghost[1].can_shoot_laser = 1;
+    }
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
             if (levels[level][i][j] == 2 || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8 || levels[level][i][j] == 9)
                 remaining_pellets++;
     printf("Remaining pellets: %d\n", remaining_pellets);
-
 }
 
 // repeatedly called inside update_pacman() to check if he is on a pellet
@@ -661,7 +669,7 @@ void get_power_up_freeze(int level_[N][M])
     {
         pacman.freeze = 1;
         pacman.freeze_duration = 100;
-        pacman.score+=180;
+        pacman.score += 180;
         activate_freeze = 1;
         /* for (int i = 0; i < 4; i++)
         {
@@ -724,28 +732,33 @@ void get_Teleport(int level_[N][M])
     }
 }
 
-void kill_pacman(){
+void kill_pacman()
+{
     pacman.lives--;
     game_state = DYING;
     pacman.death_ticks = 4 * 11;
     iChangeSpriteFrames(&pacman_sprite, pacman_death, 12);
 }
 
-int in_range(Pacman *p, Ghost *g, int r){
-    int dx=abs(p->x - g->x);
-    int dy=abs(p->y - g->y);
+int in_range(Pacman *p, Ghost *g, int r)
+{
+    int dx = abs(p->x - g->x);
+    int dy = abs(p->y - g->y);
 
-    if(dx*dx + dy*dy <= r*r){
+    if (dx * dx + dy * dy <= r * r)
+    {
         printf("in range\n");
         return 1;
     }
     return 0;
 }
 
-void draw_laser(Pacman *p, Ghost *g){
-    if(g->is_shooting_laser && tick<g->laser_start_time+g->laser_duratiton){
-        iSetColor(250,250,250);
-        iLine(p->x + A/2,p->y + A/2,g->x + A/2,g->y + A/2);
+void draw_laser(Pacman *p, Ghost *g)
+{
+    if (g->is_shooting_laser && tick < g->laser_start_time + g->laser_duratiton)
+    {
+        iSetColor(250, 250, 250);
+        iLine(p->x + A / 2, p->y + A / 2, g->x + A / 2, g->y + A / 2);
     }
 }
 
@@ -919,7 +932,7 @@ void iDraw()
         for (int i = 0; i < 4; i++)
         {
             iShowSprite(&ghost_sprite[i]);
-            draw_laser(&pacman,&ghost[i]);
+            draw_laser(&pacman, &ghost[i]);
         }
         iShowSprite(&pacman_sprite);
         ghost_score_animation();
@@ -1037,12 +1050,12 @@ void update_pacman()
         }
         activate_freeze = 0;
     }
-    if(pacman.activate_speedboost)
+    if (pacman.activate_speedboost)
     {
         pacman.speed_duration--;
         pacman.v = 7;
     }
-    if(pacman.speed_duration ==0 && pacman.activate_speedboost)
+    if (pacman.speed_duration == 0 && pacman.activate_speedboost)
     {
         pacman.v = 4;
         pacman.activate_speedboost = 0;
@@ -1110,12 +1123,15 @@ void update_ghost(Ghost *g, int pacX, int paxY, Direction pac_dir)
         iAnimateSprite(&ghost_sprite[g->name]);
 
     // trigger ghost shooting laser
-    if(g->can_shoot_laser && in_range(&pacman,g,100) && game_state!=DYING && g->is_scared == 0){
+    if (g->can_shoot_laser && in_range(&pacman, g, 100) && game_state != DYING && g->is_scared == 0)
+    {
         g->is_shooting_laser = 1;
-        g->laser_start_time=tick;
+        g->laser_start_time = tick;
         kill_pacman();
-    }else{
-        g->is_shooting_laser=0;
+    }
+    else
+    {
+        g->is_shooting_laser = 0;
     }
 
     if (ghost_can_move(levels[level], g, g->dir))
@@ -1277,7 +1293,7 @@ void iKeyboard(unsigned char key)
         }
         break;
     case 't':
-        if(game_state == GAME && teleport == 1)
+        if (game_state == GAME && teleport == 1)
         {
             pacman.x = pac_spawnX;
             pacman.y = pac_spawnY;
