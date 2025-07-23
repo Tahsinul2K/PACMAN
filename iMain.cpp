@@ -10,14 +10,14 @@
 #define TOP_BUFFER 10
 #define BOTTOM_BUFFER 10
 
-#define MAX_HEIGHT (TOP_BUFFER + (N * A) + BOTTOM_BUFFER)       // expands to 704
-#define MAX_WIDTH (LEFT_BUFFER + (M * A) + RIGHT_BUFFER)        // expands to 1138
+#define MAX_HEIGHT (TOP_BUFFER + (N * A) + BOTTOM_BUFFER) // expands to 704
+#define MAX_WIDTH (LEFT_BUFFER + (M * A) + RIGHT_BUFFER)  // expands to 1138
 #define MARGIN (A - SPRITE_SIZE)
 
 #define GHOST_SCORE_TIMER 3000
 
 #define MAX_LIVES 3
-#define MAX_LEVEL 2     //level is zero-indexed
+#define MAX_LEVEL 2 // level is zero-indexed
 
 #define DX 300
 #define DY 80
@@ -162,7 +162,7 @@ Pacman pacman;
 Ghost ghost[4];
 Score highscores[1000];
 
-Image menubg, gameover, highscorebg, splash, win, help_screen,save_screen;
+Image menubg, gameover, highscorebg, splash, win, help_screen, save_screen;
 
 // arrays for the various pacman and ghost sprites
 Image pacman_up[2], pacman_down[2], pacman_left[2], pacman_right[2], pacman_death[12];
@@ -181,7 +181,7 @@ int comp(const void *a, const void *b)
 // loads all the sprites and stuff. Called once at the very start
 void load_recources()
 {
-    iLoadImage(&help_screen,"assets/images/help_screen.png");
+    iLoadImage(&help_screen, "assets/images/help_screen.png");
     iLoadImage(&splash, "assets/images/splash.jpg");
     iResizeImage(&splash, MAX_WIDTH - 2, MAX_HEIGHT - 2);
     iLoadImage(&menubg, "assets/images/bg1.jpg");
@@ -383,7 +383,8 @@ int add_score(Score *score, int num)
     return !same_found;
 }
 
-void update_score(){
+void update_score()
+{
     Score s;
     strcpy(s.name, username);
     s.value = pacman.score;
@@ -612,11 +613,14 @@ void start_level(int l)
         ghost[1].can_shoot_laser = 1;
     }
 
-    if(l==1){
-        ghost[0].can_shoot_laser=1;
-    }else if(l==2){
-        ghost[0].can_shoot_laser=1;
-        ghost[1].can_shoot_laser=1;
+    if (l == 1)
+    {
+        ghost[0].can_shoot_laser = 1;
+    }
+    else if (l == 2)
+    {
+        ghost[0].can_shoot_laser = 1;
+        ghost[1].can_shoot_laser = 1;
     }
 
     for (int i = 0; i < N; i++)
@@ -626,8 +630,9 @@ void start_level(int l)
     printf("Remaining pellets: %d\n", remaining_pellets);
 }
 
-void win_game(){
-    game_state=WIN;
+void win_game()
+{
+    game_state = WIN;
     update_score();
 }
 
@@ -899,7 +904,7 @@ void iDraw()
         iText(MAX_WIDTH / 2 - dx / 2 + 2, MAX_HEIGHT / 2 - dy / 2 + 5, text_field, GLUT_BITMAP_HELVETICA_18);
         break;
     case SAVE:
-        iShowLoadedImage(0,0,&save_screen);
+        iShowLoadedImage(0, 0, &save_screen);
         break;
     case HIGHSCORE:
         iShowLoadedImage(0, 0, &highscorebg);
@@ -1299,56 +1304,65 @@ level
 [map] */
 
 // does what you think it does
-void create_save(){
-    FILE* f = fopen("save.txt","w");
-    if(f==NULL){
+void create_save()
+{
+    FILE *f = fopen("save.txt", "w");
+    if (f == NULL)
+    {
         printf("Unable to create save file...\n");
         return;
     }
-    fprintf(f,"%d\n",level);
-    fprintf(f,"%d %d\n",pacman.x,pacman.y);
-    for(int i=0;i<4;i++){
+    fprintf(f, "%d\n", level);
+    fprintf(f, "%d %d\n", pacman.x, pacman.y);
+    for (int i = 0; i < 4; i++)
+    {
         fprintf(f, "%d %d\n", ghost[i].x, ghost[i].y);
     }
-    fprintf(f,"%d %d\n", pacman.score, pacman.lives);
+    fprintf(f, "%d %d\n", pacman.score, pacman.lives);
 
-    for(int i=0;i<N;i++){
-        for(int j=0;j<M;j++){
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < M; j++)
+        {
             fprintf(f, "%d ", levels[level][i][j]);
         }
-        fprintf(f,"\n");
+        fprintf(f, "\n");
     }
     fclose(f);
 }
 
 // loads save and even starts the game and level automatically...
-void load_save(){
-    FILE* f = fopen("save.txt","r");
-    if(f==NULL){
+void load_save()
+{
+    FILE *f = fopen("save.txt", "r");
+    if (f == NULL)
+    {
         printf("There is no save file...\n");
         return;
     }
     start_game();
     int save_level;
-    fscanf(f,"%d", &save_level);
+    fscanf(f, "%d", &save_level);
     start_level(save_level);
 
     // read pacman position
-    fscanf(f,"%d %d", &pacman.x,&pacman.y);
+    fscanf(f, "%d %d", &pacman.x, &pacman.y);
     // read ghosts position
-    for(int i=0;i<4;i++){
+    for (int i = 0; i < 4; i++)
+    {
         fscanf(f, "%d %d", &ghost[i].x, &ghost[i].y);
         snap_to_center(&ghost[i]);
-        printf("ghost[%d] position: %d %d\n",i,ghost[i].x,ghost[i].y);
+        printf("ghost[%d] position: %d %d\n", i, ghost[i].x, ghost[i].y);
     }
 
-    fscanf(f,"%d", &pacman.score);
-    fscanf(f,"%d" ,&pacman.lives);
-    
-    
-    for(int i=0;i<N;i++){
-        for(int j=0;j<M;j++){
-            fscanf(f,"%d",&levels[save_level][i][j]);
+    fscanf(f, "%d", &pacman.score);
+    fscanf(f, "%d", &pacman.lives);
+
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < M; j++)
+        {
+            fscanf(f, "%d", &levels[save_level][i][j]);
         }
     }
     fclose(f);
@@ -1372,15 +1386,17 @@ void iKeyboard(unsigned char key)
         {
             printf("%s", username);
 
-            FILE* save_exists = fopen("save.txt", "r");
-            if(save_exists==NULL){
+            FILE *save_exists = fopen("save.txt", "r");
+            if (save_exists == NULL)
+            {
                 printf("save file does not exist...\n");
                 start_game();
-            }else{
+            }
+            else
+            {
                 game_state = SAVE;
                 printf("save file does exist.\n");
             }
-            
         }
     }
     switch (key)
@@ -1408,6 +1424,13 @@ void iKeyboard(unsigned char key)
             pacman.y = pac_spawnY;
             teleport = 0;
         }
+        break;
+    case 'e':
+        if (game_state == GAME)
+        {
+            start_level(level + 1);
+        }
+        break;
     default:
         break;
     }
@@ -1475,15 +1498,17 @@ void iMouse(int button, int state, int mx, int my)
             if (username[0] != '\0')
             {
                 iStopAllSounds();
-                FILE* save_exists = fopen("save.txt", "r");
-                if(save_exists==NULL){
+                FILE *save_exists = fopen("save.txt", "r");
+                if (save_exists == NULL)
+                {
                     printf("save file does not exist...\n");
                     start_game();
-                }else{
+                }
+                else
+                {
                     game_state = SAVE;
                     printf("save file does exist.\n");
                 }
-                
             }
             else
             {
@@ -1509,9 +1534,12 @@ void iMouse(int button, int state, int mx, int my)
         }
         break;
     case SAVE:
-        if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && mx<=MAX_WIDTH/2){
+        if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && mx <= MAX_WIDTH / 2)
+        {
             load_save();
-        }else if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && mx>MAX_WIDTH/2){
+        }
+        else if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && mx > MAX_WIDTH / 2)
+        {
             start_game();
         }
         break;
@@ -1531,7 +1559,8 @@ void iMouse(int button, int state, int mx, int my)
         if (mx > MAX_WIDTH / 2 - 200 && mx < MAX_WIDTH / 2 + 100 && my > MAX_HEIGHT / 2 - 100 && my < MAX_HEIGHT / 2 && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
         {
             create_save();
-        }else if (mx > MAX_WIDTH / 2 - 200 && mx < MAX_WIDTH / 2 + 100 && my > MAX_HEIGHT / 2 - 300 && my < MAX_HEIGHT / 2 - 200 && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+        }
+        else if (mx > MAX_WIDTH / 2 - 200 && mx < MAX_WIDTH / 2 + 100 && my > MAX_HEIGHT / 2 - 300 && my < MAX_HEIGHT / 2 - 200 && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
         {
             game_state = MENU;
         }
