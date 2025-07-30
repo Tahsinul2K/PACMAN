@@ -1,14 +1,5 @@
-13
-pop 6505
-ojpwr 2310
-cy 2310
-ifiy 1820
-tahsinul 680
-TAHSINUL 660
-tri 580
-Tahsinl 420
-ghj 320
-po 220
-o 200
-op 180
-p 70
+4
+yaamlikh 5825
+shuvoking 5025
+kjk 525
+jhio 515

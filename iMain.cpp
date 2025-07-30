@@ -40,6 +40,10 @@ int ghost_spawnY;
 int win_music_played = 0;
 int activate_freeze = 0;
 int teleport = 0;
+int volume = 20;
+int win_volume;
+int game_volume;
+int menu_volume;
 //---------------------------------------------------------------------------------------------------
 // TO DO:
 //  Sound and music
@@ -60,10 +64,9 @@ int teleport = 0;
 // 6 -> ghost spawnpoint
 // 7 -> freeze powerups
 // 8 -> speedboost
-// 9 -> Teleport
-// 9 -> Teleport
+// 9 -> teleport
 int moving_flag;
-int levels[MAX_LEVEL][N][M];
+int levels[MAX_LEVEL + 1][N][M];
 int level = 0;
 char username[50] = "";
 int username_idx = 0;
@@ -138,6 +141,9 @@ typedef struct
     int is_scared = 0;
     int respawn_ticks = 30;
 
+    int activate_speedboost = 0;
+    int speed_duration = 0;
+
     int score_timer;
 
     int dead = 0;
@@ -162,7 +168,7 @@ Pacman pacman;
 Ghost ghost[4];
 Score highscores[1000];
 
-Image menubg, gameover, highscorebg, splash, win, help_screen, save_screen;
+Image menubg, gameover, highscorebg, splash, win, save_screen, vol_up, vol_down;
 
 // arrays for the various pacman and ghost sprites
 Image pacman_up[2], pacman_down[2], pacman_left[2], pacman_right[2], pacman_death[12];
@@ -181,7 +187,11 @@ int comp(const void *a, const void *b)
 // loads all the sprites and stuff. Called once at the very start
 void load_recources()
 {
-    iLoadImage(&help_screen, "assets/images/help_screen.png");
+    iLoadImage(&vol_up, "assets/images/VOL_UP.jpg");
+    iResizeImage(&vol_up, 100, 100);
+    iLoadImage(&vol_down, "assets/images/VOL_DOWN.png");
+    iResizeImage(&vol_down, 100, 100);
+    // iLoadImage(&help_screen,"assets/images/help_screen.png");
     iLoadImage(&splash, "assets/images/splash.jpg");
     iResizeImage(&splash, MAX_WIDTH - 2, MAX_HEIGHT - 2);
     iLoadImage(&menubg, "assets/images/bg1.jpg");
@@ -233,10 +243,10 @@ void reset_positions()
 // load level from file into 2D array and also set spawn points
 void load_levels()
 {
-    for (int l = 1; l <= MAX_LEVEL; l++)
+    for (int l = 0; l <= MAX_LEVEL; l++)
     {
         char file_name[100];
-        sprintf(file_name, "level%d.txt", l);
+        sprintf(file_name, "level%d.txt", l + 1);
         FILE *f = fopen(file_name, "r");
         if (f == NULL)
         {
@@ -249,14 +259,14 @@ void load_levels()
             {
                 for (int j = 0; j < M; j++)
                 {
-                    if (fscanf(f, "%d", &levels[l - 1][i][j]) != 1)
+                    if (fscanf(f, "%d", &levels[l][i][j]) != 1)
                         printf("Unable to read level correctly...\n");
-                    if (levels[l - 1][i][j] == 5)
+                    if (levels[l][i][j] == 5)
                     {
                         pac_spawnX = LEFT_BUFFER + j * A + 1;
                         pac_spawnY = BOTTOM_BUFFER + (N - 1 - i) * A + 1;
                     }
-                    else if (levels[l - 1][i][j] == 6)
+                    else if (levels[l][i][j] == 6)
                     {
                         ghost_spawnX = LEFT_BUFFER + j * A;
                         ghost_spawnY = BOTTOM_BUFFER + (N - 1 - i) * A;
@@ -299,7 +309,7 @@ void play_music()
     if (game_state == WIN && win_music_played == 0)
     {
         iStopAllSounds();
-        iPlaySound("assets/sounds/WIN.wav", false, 50);
+        win_volume = iPlaySound("assets/sounds/WIN.wav", false, volume);
         win_music_played = 1;
         menu_music_played = 0;
     }
@@ -309,7 +319,7 @@ void play_music()
         // iPlaySound("assets/sounds/GAME.wav",true,50);
         game_music_played = 1;
         menu_music_played = 0;
-        iPlaySound("assets/sounds/GAME.wav", true, 40);
+        game_volume = iPlaySound("assets/sounds/GAME.wav", true, volume);
     }
     if (game_state == MENU && menu_music_played == 0)
     {
@@ -317,7 +327,7 @@ void play_music()
         game_music_played = 0;
         menu_music_played = 1;
         win_music_played = 0;
-        iPlaySound("assets/sounds/MENU.wav", true, 50);
+        menu_volume = iPlaySound("assets/sounds/MENU.wav", true, volume);
     }
 
     /* moving_flag = can_move(levels[level], pacman.dir);
@@ -514,6 +524,15 @@ void snap_to_center(Ghost *g)
     g->y = BOTTOM_BUFFER + row * A + (A - SPRITE_SIZE) / 2;
 }
 
+void snap_pac()
+{
+    int col = (pacman.x - LEFT_BUFFER + SPRITE_SIZE / 2) / A;
+    int row = (pacman.y - BOTTOM_BUFFER + SPRITE_SIZE / 2) / A;
+
+    pacman.x = LEFT_BUFFER + col * A + (A - SPRITE_SIZE) / 2;
+    pacman.y = BOTTOM_BUFFER + row * A + (A - SPRITE_SIZE) / 2;
+}
+
 // helper function for ghost pathfinding
 int at_tile_center(int x, int y)
 {
@@ -603,15 +622,6 @@ void start_level(int l)
     game_state = GAME;
     pacman.powered_up = 0;
     reset_positions();
-    if (l == 0)
-    {
-        ghost[0].can_shoot_laser = 1;
-    }
-    else if (l == 1)
-    {
-        ghost[0].can_shoot_laser = 1;
-        ghost[1].can_shoot_laser = 1;
-    }
 
     if (l == 1)
     {
@@ -625,8 +635,21 @@ void start_level(int l)
 
     for (int i = 0; i < N; i++)
         for (int j = 0; j < M; j++)
-            if (levels[level][i][j] == 2 || levels[level][i][j] == 3 || levels[level][i][j] == 7 || levels[level][i][j] == 8 || levels[level][i][j] == 9)
+            switch (levels[level][i][j])
+            {
+            case 2:
+            case 3:
+            case 7:
+            case 8:
+            case 9:
                 remaining_pellets++;
+                /*if(level == 2)
+                {
+                    remaining_pellets = 10;
+                }*/
+                break;
+            }
+
     printf("Remaining pellets: %d\n", remaining_pellets);
 }
 
@@ -725,9 +748,22 @@ void get_speedboost(int level_[N][M])
     int col = (centeredX - LEFT_BUFFER) / A;
     if (level_[row][col] == 8)
     {
-        pacman.activate_speedboost = 1;
+        if (tick & 1 || level != 2)
+        {
+            pacman.speed_duration = 75;
+            pacman.activate_speedboost = 1;
+        }
+        else
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                ghost[i].activate_speedboost = 1;
+                ghost[i].speed_duration = 75;
+            }
+        }
+
         pacman.score += 75;
-        pacman.speed_duration = 75;
+
         remaining_pellets--;
         level_[row][col] = 0;
         if (remaining_pellets <= 0 && level == MAX_LEVEL)
@@ -740,6 +776,7 @@ void get_speedboost(int level_[N][M])
         }
     }
 }
+
 void get_Teleport(int level_[N][M])
 {
     int centeredX = pacman.x + SPRITE_SIZE / 2;
@@ -877,7 +914,7 @@ void iDraw()
         iSetColor(0, 173 - dim_settings, 181 - dim_settings);
         iFilledRectangle(SETTINGS_BUTTONX, SETTINGS_BUTTONY, dx, dy);
         iSetColor(250, 250, 250);
-        iText(SETTINGS_BUTTONX + p, SETTINGS_BUTTONY + p, "SETTINGS", GLUT_BITMAP_9_BY_15);
+        iText(SETTINGS_BUTTONX + p, SETTINGS_BUTTONY + p, "SETTINGS & CREDITS", GLUT_BITMAP_9_BY_15);
 
         iSetColor(0, 173 - dim_help, 181 - dim_help);
         iFilledRectangle(HELP_BUTTONX, HELP_BUTTONY, dx, dy);
@@ -915,9 +952,18 @@ void iDraw()
         iText(50, 50, msg, GLUT_BITMAP_8_BY_13);
         break;
     case SETTINGS:
-        sprintf(msg, "LEFT CLICK ANYWHERE TO RETURN TO MAIN MENU%s", dots());
+        iShowLoadedImage(0, 0, &menubg);
+        sprintf(msg, "LEFT CLICK ON MENU TO RETURN TO MAIN MENU%s", dots());
         iSetColor(250, 250, 250);
         iText(50, 50, msg, GLUT_BITMAP_8_BY_13);
+        iShowLoadedImage(100, 100, &vol_up);
+        iShowLoadedImage(300, 100, &vol_down);
+        iSetColor(0, 173, 181);
+        iFilledRectangle(500, 100, 100, 100);
+        iSetColor(250, 250, 250);
+        iText(520, 150, "MENU", GLUT_BITMAP_8_BY_13);
+        iText(100, 400, "Made By: Mustafa Jamal Yaamlikh 2405107 & Tahsinul Jubair Mahmud 2405108", GLUT_BITMAP_TIMES_ROMAN_24);
+        iText(100, 300, "Advisor: Arnob Saha Ankon", GLUT_BITMAP_TIMES_ROMAN_24);
         break;
     case HELP:
         iShowImage(0, 0, "assets/images/help_screen.bmp");
@@ -964,6 +1010,10 @@ void iDraw()
         iSetColor(0, 173, 181);
         iText(LEFT_BUFFER + M * A + 30, MAX_HEIGHT - 50, score_text, GLUT_BITMAP_HELVETICA_18);
         iText(LEFT_BUFFER + M * A + 30, MAX_HEIGHT - 100, lives_text, GLUT_BITMAP_HELVETICA_18);
+        if (teleport)
+            iText(LEFT_BUFFER + M * A + 30, MAX_HEIGHT - 160, "TELEPORT AVAILABLE (t)", GLUT_BITMAP_HELVETICA_18);
+        iText(LEFT_BUFFER + M * A + 30, MAX_HEIGHT - 200, "PAUSE (p)", GLUT_BITMAP_HELVETICA_18);
+
         iText(LEFT_BUFFER + M * A + 30, 100, remaining_pellets_text, GLUT_BITMAP_HELVETICA_18);
         iText(LEFT_BUFFER + M * A + 30, 50, level_text, GLUT_BITMAP_HELVETICA_18);
 
@@ -978,12 +1028,25 @@ void iDraw()
         break;
     case LOSE:
         iSetColor(250, 250, 250);
+
+        sprintf(score_text, "SCORE: %6d", pacman.score);
+        iSetColor(0, 173, 181);
+        iText(MAX_WIDTH / 2 - 60, 220, score_text, GLUT_BITMAP_HELVETICA_18);
+
         iShowLoadedImage(MAX_WIDTH / 4, MAX_HEIGHT / 2 - 20, &gameover);
         sprintf(msg, "LEFT CLICK ANYWHERE TO RETURN TO MAIN MENU%s", dots());
         iText(50, 50, msg, GLUT_BITMAP_8_BY_13);
         break;
     case WIN:
         iShowLoadedImage(0, 0, &win);
+
+        sprintf(score_text, "SCORE: %6d", pacman.score);
+        iSetColor(0, 173, 181);
+        iText(MAX_WIDTH / 2 - 60, 120, score_text, GLUT_BITMAP_HELVETICA_18);
+
+        sprintf(msg, "LEFT CLICK ANYWHERE TO RETURN TO MAIN MENU%s", dots());
+        iSetColor(250, 250, 250);
+        iText(50, 50, msg, GLUT_BITMAP_8_BY_13);
     default:
         break;
     }
@@ -1036,6 +1099,11 @@ void update_pacman()
 {
     if (game_state != GAME)
         return;
+
+    if (at_tile_center(pacman.x, pacman.y))
+    {
+        snap_pac();
+    }
     if (can_move(levels[level], pacman.dir_buffer))
     {
         pacman.dir = pacman.dir_buffer;
@@ -1061,6 +1129,10 @@ void update_pacman()
             iChangeSpriteFrames(&pacman_sprite, pacman_down, 2);
             break;
         }
+    }
+    else
+    {
+        snap_pac();
     }
 
     pacman_sprite.x = pacman.x;
@@ -1191,6 +1263,16 @@ void update_ghost(Ghost *g, int pacX, int paxY, Direction pac_dir)
             break;
         }
     }
+    if (g->activate_speedboost)
+    {
+        g->speed_duration--;
+        g->v = 5;
+    }
+    if (g->speed_duration == 0 && g->activate_speedboost)
+    {
+        g->v = 3;
+        g->activate_speedboost = 0;
+    }
 }
 
 // checks for collision between pacman and ghosts. Called in update_game()
@@ -1306,7 +1388,9 @@ level
 // does what you think it does
 void create_save()
 {
-    FILE *f = fopen("save.txt", "w");
+    char file_path[100];
+    sprintf(file_path, "saves/%s.txt", username);
+    FILE *f = fopen(file_path, "w");
     if (f == NULL)
     {
         printf("Unable to create save file...\n");
@@ -1334,7 +1418,9 @@ void create_save()
 // loads save and even starts the game and level automatically...
 void load_save()
 {
-    FILE *f = fopen("save.txt", "r");
+    char file_path[100];
+    sprintf(file_path, "saves/%s.txt", username);
+    FILE *f = fopen(file_path, "r");
     if (f == NULL)
     {
         printf("There is no save file...\n");
@@ -1386,7 +1472,9 @@ void iKeyboard(unsigned char key)
         {
             printf("%s", username);
 
-            FILE *save_exists = fopen("save.txt", "r");
+            char file_path[100];
+            sprintf(file_path, "saves/%s.txt", username);
+            FILE *save_exists = fopen(file_path, "r");
             if (save_exists == NULL)
             {
                 printf("save file does not exist...\n");
@@ -1418,19 +1506,22 @@ void iKeyboard(unsigned char key)
         }
         break;
     case 't':
-        if (game_state == GAME && teleport == 1)
+        if (game_state == GAME && teleport)
         {
             pacman.x = pac_spawnX;
             pacman.y = pac_spawnY;
-            teleport = 0;
+            teleport--;
         }
         break;
-    case 'e':
-        if (game_state == GAME)
+    case 'n':
+    if(game_state == GAME)
+    {   
+        if(level == MAX_LEVEL)
         {
-            start_level(level + 1);
+            win_game();
         }
-        break;
+        else start_level(level + 1);
+    }
     default:
         break;
     }
@@ -1498,7 +1589,10 @@ void iMouse(int button, int state, int mx, int my)
             if (username[0] != '\0')
             {
                 iStopAllSounds();
-                FILE *save_exists = fopen("save.txt", "r");
+
+                char file_path[100];
+                sprintf(file_path, "saves/%s.txt", username);
+                FILE *save_exists = fopen(file_path, "r");
                 if (save_exists == NULL)
                 {
                     printf("save file does not exist...\n");
@@ -1545,11 +1639,47 @@ void iMouse(int button, int state, int mx, int my)
         break;
 
     // intentionally no break; to be able to return to the main menu
+    case SETTINGS:
+        if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && mx >= 100 && mx <= 200 && my >= 100 && my <= 200)
+        {
+            if(volume <= 100 && volume>=0)
+            {   
+                volume = volume + 10 ;
+                if(volume>100)
+                {
+                    volume = 100;
+                }
+                iSetVolume(game_volume,volume);
+                iSetVolume(win_volume,volume);
+                iSetVolume(menu_volume,volume);
+                
+            }
+        }
+        if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && mx >= 300 && mx <= 400 && my >= 100 && my <= 200)
+        {
+            if(volume <= 100 && volume>=0)
+            {   
+                volume = volume - 10 ;
+                if(volume<0)
+                {
+                    volume =0;
+                }
+                iSetVolume(game_volume,volume);
+                iSetVolume(win_volume,volume);
+                iSetVolume(menu_volume,volume);
+                
+            }
+        }
+        if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && mx >= 500 && mx <= 600 && my >= 100 && my <= 200)
+        {
+            game_state = MENU;
+        }
+        break;
     case SPLASH:
     case WIN:
     case HIGHSCORE:
-    case SETTINGS:
     case HELP:
+    case LOSE:
         if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
         {
             game_state = MENU;
@@ -1564,8 +1694,6 @@ void iMouse(int button, int state, int mx, int my)
         {
             game_state = MENU;
         }
-        break;
-    case LOSE:
         break;
     default:
         break;
